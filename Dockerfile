@@ -4,7 +4,8 @@ WORKDIR /app/logs
 RUN pip install awslogs \
   && useradd -m aws
 
+
+
 USER aws
 
 ENTRYPOINT [ "awslogs" ]
-

@@ -1,32 +1,40 @@
+SHELL := /bin/bash
 
-app        = $(shell basename "${PWD}" | sed 's|docker-||g')
-branch     = $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null || echo "unstable")
-build_date = $(shell date -u +%FT%T.%S%Z)
-commit     = $(shell git rev-parse --short HEAD 2> /dev/null || echo "unstable")
-img        = ${ns}/${app}:${tag}
-ns         = gruen
-tag        = $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null || echo "unstable")
+TRAVIS_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null || echo "unstable")
+TRAVIS_COMMIT ?= $(shell git rev-parse --short HEAD 2> /dev/null || echo "unstable")
 
-build:
+app           ?= $(shell basename "${PWD}" | sed 's|docker-||g')
+build_date    ?= $(shell date -u +%FT%T.%S%Z)
+img           ?= ${ns}/${app}:${tag}
+ns            ?= gruen
+tag           ?= $(shell sed 's|/|_|g' <<< ${TRAVIS_BRANCH}) 
+# This is used for pushing from CI
+
+base = [0-9]{1,4}
+match = ^${base}(.${base})?(.${base})?((-|_).*)?
+
+.PHONY: build
+build: lint
 	docker build \
-	  --build-arg BRANCH_NAME=${branch} \
+	  --build-arg BRANCH_NAME=${TRAVIS_BRANCH} \
 	  --build-arg BUILD_DATE=${build_date} \
-	  --build-arg COMMIT_SHA=${comimt} \
+	  --build-arg COMMIT_SHA=${TRAVIS_COMMIT} \
 	  -t ${img} .
 	
+.PHONY: clean
 clean:
 	docker rmi ${img}
 
+.PHONY: lint
 lint:
 	docker run -i --rm hadolint/hadolint:latest < Dockerfile
 	
+.PHONY: push
 push:
-	docker push ${img}
+	[[ ${tag} =~ ${match} ]] && docker push ${img} || echo "No push, not a version tag"
 
-run:
-	docker run -it --rm --entrypoint bash ${img}
-
-test:
+.PHONY: test
+test: build
 	docker run --rm \
 		-v "${PWD}:/test" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -37,18 +45,6 @@ test:
 			--image ${img} \
 			--config /test/test.yaml
 
-vars:
-	printf "%s\\n" \
-    "app: ${app}" \
-    "branch: ${branch}" \
-    "build_date: ${build_date}" \
-    "commit: ${commit}" \
-    "img: ${img}" \
-    "ns: ${ns}" \
-    "tag: ${tag}"
-
-.phony: build vars
-
 ifndef VERBOSE
-.SILENT:
+  .SILENT:
 endif

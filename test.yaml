@@ -1,0 +1,23 @@
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "Whoami"
+    command: "whoami"
+    expectedOutput: ["aws"]
+  - name: "which awslogs"
+    command: "which"
+    args: ["awslogs"]
+    expectedOutput: ['/usr/local/bin/awslogs']
+  - name: "awslogs version"
+    command: "awslogs"
+    args: ["--version"]
+    expectedOutput: ["0.11.0"]
+  - name: "python version"
+    command: "python"
+    args: ["--version"]
+    expectedOutput: ['3.7.3']
+metadataTest:
+  cmd: ["--help"]
+  entrypoint: ["awslogs"]
+  exposedPorts: []
+  workdir: "/app/logs"
